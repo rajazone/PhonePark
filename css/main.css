@@ -1,0 +1,65 @@
+#header{
+width:1000px;
+margin-left:auto;
+margin-right:auto;
+}
+
+#sidebar{
+float:right;
+width:250px;
+height:460px;
+position:relative;
+}
+
+#legend{
+position:absolute;
+bottom:0;
+}
+#screenshot{
+float:right;
+
+}
+
+ul {
+	list-style:none;
+	color:#0000FF;
+
+}
+
+
+
+#street ol{
+	list-style:none;
+	margin-left:55px;
+}
+
+#street ul{
+	list-style:none;
+	margin-left:55px;
+
+}
+
+.container 
+{
+width:1000px;
+height:460px;
+margin-left:auto;
+margin-right:auto;
+margin-top:10px;
+border:1px solid #cccccc;
+background-color:#DEB887;
+
+}
+
+#pagecontent
+{
+width: 975px;
+margin-left:20px;
+margin-right:auto;
+margin-top:10px;
+margin-bottom:10px;
+}
+
+    
+
+
