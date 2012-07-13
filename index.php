@@ -1,10 +1,13 @@
 <?php
+session_start();
 include_once "db.php";
 $searchaddress=null;
 $searchaddress = $_POST['street'];
 $addlat = $_GET['addlat'];
 $addlong = $_GET['addlong'];
 $staddress = $_GET['stadd'];
+$nearbyAdd = $_SESSION['nearby'];
+$distance=$_GET['dist'];
 if($searchaddress==null&&$addlat==null&&$addlong==null)
 {
 	$query = mysql_query("select latitude,longitude,address,parkingspaces,occupiedspaces,dayratehour,daytimelimit,direction from `backup_chicago_meters`");
@@ -13,13 +16,18 @@ if($searchaddress!=null&&$addlat==null&&$addlong==null)
 {
 	$query = mysql_query("select latitude,longitude,address,parkingspaces,occupiedspaces,dayratehour,daytimelimit,direction from `backup_chicago_meters` where address like '%$searchaddress%'");
 }
+
 if($addlat!=null && $addlong!=null)
 {
-	$fromlat=$addlat-0.005;
-	$tolat=$addlat+0.005;
-	$fromlong=$addlong-0.005;
-	$tolong=$addlong+0.005;
-	$query = mysql_query("select latitude , longitude , address , parkingspaces , occupiedspaces , dayratehour , daytimelimit , direction from `backup_chicago_meters` where longitude between $fromlong and $tolong or latitude between $fromlat and $tolat");
+$len = sizeof($nearbyAdd);
+$nearbyAddList = $nearbyAdd[0];
+	for($i=1;$i<$len;$i++)
+	{
+		
+		$nearbyAddList = $nearbyAddList."', '".$nearbyAdd[$i];
+	}
+
+	$query = mysql_query("select latitude , longitude , address , parkingspaces , occupiedspaces , dayratehour , daytimelimit , direction from `backup_chicago_meters` where address in('$nearbyAddList')");
 }
 
 if($query)
@@ -131,6 +139,12 @@ while($row = mysql_fetch_array($result))
 	<div>
   		<form name=searchform method=post action=new.php>
     		<input name=stadd type=text />
+    		<select name="distance">
+			<option value="0.3">0.3</option>
+			<option value="0.5">0.5</option>
+			<option value="1">1.0</option>
+			<option value="2">2.0</option>
+		</select>miles
     		<input type=submit value="Search by Address" />
     		</form>
   	</div>
@@ -143,7 +157,7 @@ while($row = mysql_fetch_array($result))
   			}
   			if($staddress!=null)
   			{
-  				echo "Parking spaces near ".$stadd;
+  				echo "Parking spaces near ".$stadd." with in ".$distance." miles";
   			} 
   		?>
   	</div>

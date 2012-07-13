@@ -13,6 +13,7 @@
 include "db.php";
 
 $add = $_POST['stadd'];
+$dist = $_POST['distance'];
 if($add!=null)
 {
 ?>
@@ -21,13 +22,14 @@ if($add!=null)
 <script type=text/javascript>
 
   	var address = '<? echo $add; ?>';
+  	var distance = '<? echo $dist; ?>';
 	var geocoder = new google.maps.Geocoder();
 
 	geocoder.geocode( { 'address': address}, function(results, status) {
   	var location = results[0].geometry.location;
   	var lati = location.lat();
   	var longi = location.lng();
-  	document.location = 'http://www.rajak.me/index.php?addlat='+lati+'&addlong='+longi+'&stadd='+address;
+  	document.location = 'http://www.rajak.me/page.php?addlat='+lati+'&addlong='+longi+'&stadd='+address+'&dist='+distance;
   	
 	});
   </script>
