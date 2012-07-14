@@ -9,9 +9,6 @@
       </script>
 
 <?php
-
-include "db.php";
-
 $add = $_POST['stadd'];
 $dist = $_POST['distance'];
 if($add!=null)

@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,192 +25,146 @@ import android.os.Bundle;
 import android.os.StrictMode;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
-import android.widget.Spinner;
 import android.widget.Toast;
 
 public class Main extends Activity
 
 {
 
-/** Called when the activity is first created. */
-	
+	/** Called when the activity is first created. */
 
-@Override
+
+	@Override
 
 	public void onCreate(Bundle savedInstanceState)
 	{
-	if (android.os.Build.VERSION.SDK_INT > 9) {
-
-	      StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
-
-	      StrictMode.setThreadPolicy(policy);
-
-	    }
+		//Correcting version issues with Android SDK
+		if (android.os.Build.VERSION.SDK_INT > 9){
+			StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+			StrictMode.setThreadPolicy(policy);
+		}
 		super.onCreate(savedInstanceState);
-
 		setContentView(R.layout.main);
-
+		
+		//Declaring the form fields - present in the main.xml (GUI)
 		final EditText et1 = (EditText) findViewById(R.id.editText1);
 		final EditText et2 = (EditText) findViewById(R.id.editText2);
+		final EditText et3 = (EditText) findViewById(R.id.editText3);
 		final Button b1 = (Button) findViewById(R.id.button1);
 		final Button b2 = (Button)findViewById(R.id.button2);
 		final RadioGroup rg = (RadioGroup)findViewById(R.id.radioGroup1);
-		final Spinner sp1 = (Spinner) findViewById(R.id.spinner1);
-		
 
-
-			/* Use the LocationManager class to obtain GPS locations */
+		/* Use the LocationManager class to obtain GPS locations */
 
 		LocationManager mlocManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
-
 		LocationListener mlocListener = new LocationListener() {
-			
+			@Override
 			public void onLocationChanged(final Location loc)
-
 			{
-				
-						Double Lati =loc.getLatitude();
-				        DecimalFormat df = new DecimalFormat("#.####");
-				        final String Latitude = df.format(Lati);
-				        et1.setText(Latitude);
-						Double Longi =loc.getLongitude();
-						final String Longitude = df.format(Longi);
-						et2.setText(Longitude);
-				
+				//On Location Changed - This module is executed
+				Double Lati =loc.getLatitude();
+				final String Latitude = Lati+"";
+				et1.setText(Latitude);
+				Double Longi =loc.getLongitude();
+				final String Longitude = Longi+"";
+				et2.setText(Longitude);
+				//When Button b1 - GetAddress is clicked
+				b1.setOnClickListener(new OnClickListener() {
 
-								
-					b1.setOnClickListener(new OnClickListener() {
-					
 					@Override
 					public void onClick(View v) {
+						//Value of Edit Text 1 and 2 are assigned to String Lat and Lon
 						String Lat =et1.getText().toString();
 						String Lon = et2.getText().toString();
-						
-						
+						//url is constructed with Lat and Lon as arguments
 						String url1 = "http://rajak.me/input.php?Lati="+Lat+"&Longi="+Lon;
+						//post http request
 						HttpPost httpPost1 = new HttpPost(url1);
 						HttpClient httpClient1 = new DefaultHttpClient();
 						try {
+							//getting http response
 							HttpResponse httpResponse1 = httpClient1.execute(httpPost1);
-							
 							HttpEntity entity = httpResponse1.getEntity();
-						    InputStream is = entity.getContent();
-
-						       //converting response to string
-						       BufferedReader reader = new BufferedReader(new InputStreamReader(is,"iso-8859-1"),8);
-						       StringBuilder sb = new StringBuilder();
-						       String line = null;
-						       while ((line = reader.readLine()) != null) 
-						       {
-						               sb.append(line + "\n");
-						       }
-						       is.close();
-						       
-						       String result = "";
-						       result = sb.toString();
-						       String addresses[] = result.split(":");
-						
-						ArrayAdapter<String> adapter = 
-								new ArrayAdapter<String>(getApplicationContext(), android.R.layout.simple_spinner_item);
-
-						
-						for(int i=0;i<addresses.length;i++)
-						{
-							adapter.add(addresses[i]);
-						}
-						sp1.setAdapter(adapter);
-						
-						
-
-						      
-
-										
+							InputStream is = entity.getContent();
+							BufferedReader reader = new BufferedReader(new InputStreamReader(is,"iso-8859-1"),8);
+							StringBuilder sb = new StringBuilder();
+							String line = null;
+							while ((line = reader.readLine()) != null) 
+							{
+								sb.append(line + "\n");
+							}
+							is.close();
+							String result = "";
+							result = sb.toString();
+							String addresses[] = result.split(":");
+							//assign the first address into EditText 3 - Address
+							et3.setText(addresses[0]);
 						} catch (ClientProtocolException e1) {
 							e1.printStackTrace();
 						} catch (IOException e1) {
 							e1.printStackTrace();
 						} 
-
-						
 					}
 				});
-				
-					sp1.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-						public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
-					        parent.getItemAtPosition(pos);
-					        
-					    }
-					    public void onNothingSelected(AdapterView<?> parent) {
-					    }
-					    
-					    
-					});
-					
-					b2.setOnClickListener(new OnClickListener() {
-						
-						@Override
-						public void onClick(View v) {
-							String address = String.valueOf(sp1.getSelectedItem());
-							int option = rg.getCheckedRadioButtonId();
-							 
-						    RadioButton isParked = (RadioButton) findViewById(option);
-						    String parkStatus = isParked.getText().toString();
-						    
-						    //String url1 = "http://rajak.me/storedb.php?address='"+address+"'&status='"+parkStatus+"'";
-						    String url2 = "http://rajak.me/storedb.php";
-							HttpPost httpPost2 = new HttpPost(url2);
-							
-							List<BasicNameValuePair> nameValuePairs = new ArrayList<BasicNameValuePair>(2);
-				            nameValuePairs.add(new BasicNameValuePair("add",address));
-				            nameValuePairs.add(new BasicNameValuePair("status",parkStatus));
-				            
-							try {
-								
-								httpPost2.setEntity(new UrlEncodedFormEntity(nameValuePairs));
-								HttpClient httpClient2 = new DefaultHttpClient();
-								HttpResponse httpResponse2 = httpClient2.execute(httpPost2);
-								
-								HttpEntity entity = httpResponse2.getEntity();
-							    InputStream is = entity.getContent();
 
-							       //converting response to string
-							       BufferedReader reader = new BufferedReader(new InputStreamReader(is,"iso-8859-1"),8);
-							       StringBuilder sb = new StringBuilder();
-							       String line = null;
-							       while ((line = reader.readLine()) != null) 
-							       {
-							               sb.append(line + "\n");
-							       }
-							       is.close();
-							       
-							       String result = "";
-							       result = sb.toString();
-							       Toast toast = Toast.makeText(getApplicationContext(), result, Toast.LENGTH_SHORT);
-								    toast.show();
-						           
+				//Button b2 - Submit is clicked
+				b2.setOnClickListener(new OnClickListener() {
+
+					@Override
+					public void onClick(View v) {
+						String address = et3.getText().toString();
+						int option = rg.getCheckedRadioButtonId();
+						RadioButton isParked = (RadioButton) findViewById(option);
+						//Radio button value is stored in variable
+						String parkStatus = isParked.getText().toString();
+						String url2 = "http://rajak.me/storedb.php";
+						HttpPost httpPost2 = new HttpPost(url2);
+						List<BasicNameValuePair> nameValuePairs = new ArrayList<BasicNameValuePair>(2);
+						//address and parking status variables are passed along with URL - like post method
+						nameValuePairs.add(new BasicNameValuePair("add",address));
+						nameValuePairs.add(new BasicNameValuePair("status",parkStatus)); 
+						try {		
+							httpPost2.setEntity(new UrlEncodedFormEntity(nameValuePairs));
+							HttpClient httpClient2 = new DefaultHttpClient();
+							HttpResponse httpResponse2 = httpClient2.execute(httpPost2);
+							HttpEntity entity = httpResponse2.getEntity();
+							InputStream is = entity.getContent();
+							BufferedReader reader = new BufferedReader(new InputStreamReader(is,"iso-8859-1"),8);
+							StringBuilder sb = new StringBuilder();
+							String line = null;
+							while ((line = reader.readLine()) != null) 
+							{
+								sb.append(line + "\n");
 							}
+							is.close();
 
-							catch (ClientProtocolException e1) {
-								e1.printStackTrace();
-							} catch (IOException e1) {
-								e1.printStackTrace();
-							} 
-						    
-						    
-							
+							String result = "";
+							result = sb.toString();
+							//httpresponse result is displayed as toast message
+							Toast toast = Toast.makeText(getApplicationContext(), result, Toast.LENGTH_SHORT);
+							toast.show();
+
 						}
-					});
-					
-				
-									
-				
-				   	           
+
+						catch (ClientProtocolException e1) {
+							e1.printStackTrace();
+						} catch (IOException e1) {
+							e1.printStackTrace();
+						} 
+
+
+
+					}
+				});
+
+
+
+
+
 			}
 
 			@Override
@@ -219,7 +172,7 @@ public class Main extends Activity
 			public void onProviderDisabled(String provider)
 
 			{	
-				
+
 			}
 
 			@Override
@@ -237,11 +190,11 @@ public class Main extends Activity
 			{
 
 			}	
-			
+
 
 		};
 
-		mlocManager.requestLocationUpdates( LocationManager.GPS_PROVIDER, 0, 20, mlocListener);
+		mlocManager.requestLocationUpdates( LocationManager.GPS_PROVIDER, 0, 0, mlocListener);
 
 	}
 

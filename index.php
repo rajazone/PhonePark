@@ -1,41 +1,54 @@
 <?php
+//starting session - used for passing arrays
 session_start();
+
+//including db file
 include_once "db.php";
-$searchaddress=null;
-$searchaddress = $_POST['street'];
-$addlat = $_GET['addlat'];
-$addlong = $_GET['addlong'];
-$staddress = $_GET['stadd'];
+$searchAddress=null;
+
+//Getting search address from search bar with post method
+$searchAddress = $_POST['street'];
+
+//Getting Latitude, Longitude, Address, Distance and near-by addresses from page.php 
+$addLat = $_GET['addLat'];
+$addLong = $_GET['addLong'];
+$stAddress = $_GET['stadd'];
 $nearbyAdd = $_SESSION['nearby'];
 $distance=$_GET['dist'];
-if($searchaddress==null&&$addlat==null&&$addlong==null)
+
+//If no address is entered and searched, displays full map with all parking spaces
+if($searchAddress==null&&$addLat==null&&$addLong==null)
 {
-	$query = mysql_query("select latitude,longitude,address,parkingspaces,occupiedspaces,dayratehour,daytimelimit,direction from `backup_chicago_meters`");
-}
-if($searchaddress!=null&&$addlat==null&&$addlong==null)
-{
-	$query = mysql_query("select latitude,longitude,address,parkingspaces,occupiedspaces,dayratehour,daytimelimit,direction from `backup_chicago_meters` where address like '%$searchaddress%'");
+	$stmt = $db->query('select latitude,longitude,address,parkingspaces,occupiedspaces,dayratehour,daytimelimit,direction from `backup_chicago_meters`');
 }
 
-if($addlat!=null && $addlong!=null)
+//If some address is entered in first search bar and nothing is received from page.php
+if($searchAddress!=null&&$addLat==null&&$addLong==null)
 {
-$len = sizeof($nearbyAdd);
-$nearbyAddList = $nearbyAdd[0];
-	for($i=1;$i<$len;$i++)
+	//This query selectes lat,long,.... from DB where address column of table contains the address searched
+	$stmt = $db->prepare("select latitude,longitude,address,parkingspaces,occupiedspaces,dayratehour,daytimelimit,direction from `backup_chicago_meters` where address like :searchTerm");
+	$stmt->bindValue(':searchTerm', '%'.$searchAddress.'%', PDO::PARAM_STR);
+	$stmt->execute();
+}
+
+//If some address is entered to find near by parking spaces, it goes to page.php and gets the lat,log of the specified add
+if($addLat!=null && $addLong!=null)
+{
+	//This query returns lat,long.... from DB where address colum of table equals to any of the address in near-by address array
+	$keyCount = count($nearbyAdd);
+	$keys = implode(', ', array_fill(0, $keyCount, '?'));
+	$query ="select latitude , longitude , address , parkingspaces , occupiedspaces , dayratehour , daytimelimit , direction from `backup_chicago_meters` where address in ({$keys})";
+	$stmt = $db->prepare($query);
+	$stmt->execute($nearbyAdd);
+
+
+}
+
+if($stmt)
+{
+	$row_count = $stmt->rowCount();
+	if($row_count!=0)
 	{
-		
-		$nearbyAddList = $nearbyAddList."', '".$nearbyAdd[$i];
-	}
-
-	$query = mysql_query("select latitude , longitude , address , parkingspaces , occupiedspaces , dayratehour , daytimelimit , direction from `backup_chicago_meters` where address in('$nearbyAddList')");
-}
-
-if($query)
-{
-	if(mysql_num_rows($query)!=0)
-	{
-	
-
 		//Declaring arrays for storing the result of the query
 		$longis=array();
 		$latis=array();
@@ -47,16 +60,15 @@ if($query)
 		$dir = array();
 
 		//Looping through the resultant array of the query and storing it in corresponding field arrays
-		while($array=mysql_fetch_array($query))
-		{
-			$latis[] = $array[0];
-			$longis[] = $array[1];
-			$address[]=$array[2];
-			$pspaces[]=$array[3];
-			$ospaces[]=$array[4];
-			$rate[]=$array[5];
-			$timeLimit[]=$array[6];
-			$dir[]=$array[7];	
+		while($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    			$latis[] = $row['latitude'];
+			$longis[] = $row['longitude'];
+			$address[]=$row['address'];
+			$pspaces[]=$row['parkingspaces'];
+			$ospaces[]=$row['occupiedspaces'];
+			$rate[]=$row['dayratehour'];
+			$timeLimit[]=$row['daytimelimit'];
+			$dir[]=$row['direction'];	
 		}
 		
 	}
@@ -71,10 +83,10 @@ if($query)
 <html>
 
 <?php
+//Loads addresses from DB into $result variable - auto complete purpose
+$result = $db->query("SELECT address FROM `backup_chicago_meters`");
 
-$result = mysql_query("SELECT address FROM backup_chicago_meters");
-
-while($row = mysql_fetch_array($result))
+while($row = $result->fetch(PDO::FETCH_ASSOC))
   {
 	  $addr=$addr.",".$row['address'];
 
@@ -151,11 +163,11 @@ while($row = mysql_fetch_array($result))
 
   	<div>
   		<?php
-  			if($searchaddress!=null)
+  			if($searchAddress!=null)
   			{
-  				echo "Parking spaces for ". $searchaddress;
+  				echo "Parking spaces for ". $searchAddress;
   			}
-  			if($staddress!=null)
+  			if($stAddress!=null)
   			{
   				echo "Parking spaces near ".$stadd." with in ".$distance." miles";
   			} 
@@ -197,34 +209,35 @@ var scriptTime = gg1[0].split(":");
 var hh1 = new Array("<?php echo implode(":",$dir);?>");
 var scriptDir = hh1[0].split(":");
 
-var scriptSearch = '<?php echo $searchaddress; ?>';
-var scriptaddLat = '<?php echo $addlat; ?>';
-var scriptaddLong = '<?php echo $addlong; ?>';
-var scriptStAdd = '<?php echo $staddress; ?>';
+//Getting PHP variables for search address, lat n longi, street address
+var scriptSearch = '<?php echo $searchAddress; ?>';
+var scriptaddLat = '<?php echo $addLat; ?>';
+var scriptaddLong = '<?php echo $addLong; ?>';
+var scriptStAdd = '<?php echo $stAddress; ?>';
 var k = 0;
 if(scriptSearch=='')
-k=1411;
-if(scriptaddLat!='')
+k=1411; //to display loop as center of the map- otherwise 0 is fine
+if(scriptaddLat!='') //If searched for parking spaces nearby an address - data received from page,php is not null 
 {
-	var myLatlng = new google.maps.LatLng(scriptaddLat,scriptaddLong);
-    var myOptions = {
-      zoom: 16,
-      center: myLatlng,
-      mapTypeId: google.maps.MapTypeId.ROADMAP
-    }
+	var myLatlng = new google.maps.LatLng(scriptaddLat,scriptaddLong);//map is loaded with new lat lng
+	var myOptions = {
+		zoom: 16,center: 
+		myLatlng,
+		mapTypeId: google.maps.MapTypeId.ROADMAP
+	    }
     var map = new google.maps.Map(document.getElementById('map'), myOptions);
     var addmarker = new google.maps.Marker({
         position: myLatlng, 
         map: map,
         title:scriptStAdd
-    });
+    });//marker is added with searched street address as title of the marker
 
    
    
 }
-else{
-//map variable which is main method that displays the map
-var map = new google.maps.Map(document.getElementById('map'), {
+else //If searched using first search bar - spaces in a street or a particular address listed in DB
+{
+	var map = new google.maps.Map(document.getElementById('map'), {
       		zoom: 15,
       		center: new google.maps.LatLng(scriptLati[k], scriptLongi[k]),
       		mapTypeId: google.maps.MapTypeId.ROADMAP
@@ -233,24 +246,34 @@ var map = new google.maps.Map(document.getElementById('map'), {
 
 //Declaring infowindow for pop up message for markers
 var infowindow = new google.maps.InfoWindow();
+
+//Declaring different zoom levels
 var highZoom = false;
 var lowZoom=false;
 var veryHighZoom = false;
 var veryLowZoom=false;
 
 //declaring the arrays for markers for storing different types of markers
+
+//red line markers
 var hrmarkers = new Array();
 var vrmarkers = new Array();
 var nermarkers= new Array();
 var sermarkers= new Array();
+
+//green line markers
 var hgmarkers = new Array();
 var vgmarkers = new Array();
 var negmarkers= new Array();
 var segmarkers= new Array();
+
+//blue line markers
 var hbmarkers = new Array();
 var vbmarkers = new Array();
 var nebmarkers= new Array();
 var sebmarkers= new Array();
+
+//inclined line markers
 var negmarkers30= new Array();
 var segmarkers30= new Array();
 var nebmarkers30= new Array();
@@ -265,10 +288,12 @@ var hrimage='images/hr/hrsmall.png', vrimage='images/vr/vrsmall.png',hgimage='im
     
 for (i = 0; i < scriptLati.length; i++)
 {
-	var maxtreshold = scriptPspaces[i]/2;
-    	var mintreshold = scriptPspaces[i]/3;
-    	if(scriptOspaces[i]>maxtreshold)
+	var maxThreshold = scriptPspaces[i]/2;
+    	var minThreshold = scriptPspaces[i]/3;
+    	//If the occupied spaces exceeds max threshold, that is > half, the line markers are added to red group
+    	if(scriptOspaces[i]>maxThreshold)
     	{
+    		//If direction of parking space is East/ West, marker is added to horizontal lines array
     		if(scriptDir[i]=='E'||scriptDir[i]=='W'||scriptDir[i]=='EAST'||scriptDir[i]=='WEST'||scriptDir[i]=='East'||scriptDir[i]=='West')
     		{
     			marker = new google.maps.Marker({
@@ -278,6 +303,7 @@ for (i = 0; i < scriptLati.length; i++)
       			});
       			hrmarkers.push(marker);
       		}
+      		//If direction of parking space is NorthEast , marker is added to NE lines array
       		else if(scriptDir[i]=='NE')
       		{
       			marker = new google.maps.Marker({
@@ -288,6 +314,7 @@ for (i = 0; i < scriptLati.length; i++)
       			nermarkers.push(marker);
 
       		}
+      		//If direction of parking space is SE , marker is added to NE lines array
       		else if(scriptDir[i]=='SE')
       		{
       			marker = new google.maps.Marker({
@@ -308,6 +335,7 @@ for (i = 0; i < scriptLati.length; i++)
       			nermarkers30.push(marker);
 
       		}
+      		//If direction of parking space is S or N , marker is added to vertical lines array
       		else
       		{
       			marker = new google.maps.Marker({
@@ -322,7 +350,8 @@ for (i = 0; i < scriptLati.length; i++)
 
       	}
 
-      	else if(scriptOspaces[i]>mintreshold&&scriptOspaces[i]<maxtreshold)
+      	//If the occupied spaces exceeds min threshold but less than max threshold, the line markers are added to blue group
+      	else if(scriptOspaces[i]>minThreshold&&scriptOspaces[i]<maxThreshold)
     	{
     		if(scriptDir[i]=='E'||scriptDir[i]=='W'||scriptDir[i]=='EAST'||scriptDir[i]=='WEST'||scriptDir[i]=='East'||scriptDir[i]=='West')
     		{
@@ -377,8 +406,7 @@ for (i = 0; i < scriptLati.length; i++)
 
       	}
 
-
-
+      	//If the occupied spaces is less than min threshold, that is < 1/3, the line markers are added to green group
       	else
     	{
     		if(scriptDir[i]=='E'||scriptDir[i]=='W'||scriptDir[i]=='EAST'||scriptDir[i]=='WEST'||scriptDir[i]=='East'||scriptDir[i]=='West')
@@ -432,6 +460,7 @@ for (i = 0; i < scriptLati.length; i++)
       		}
 
       	}
+      	//Adding info window to the markers - setting content with address ,parking spaces, rate and time
       	google.maps.event.addListener(marker, 'click', (function(marker, i) {
         return function() {
           infowindow.setContent(scriptAddress[i]+"<br> Total space: "+scriptPspaces[i]
@@ -441,10 +470,13 @@ for (i = 0; i < scriptLati.length; i++)
 
 }
 
+//When zoom level is changed, this function is called
 google.maps.event.addListener(map, 'zoom_changed', function() 
 {
+//Getting the zoom level
 var zoomLevel = map.getZoom();
-//use count to utilize the highZoom for optimizing...
+
+//Setting the appropriate zoomlevel as true which are initialized to false at the begining of script
 if(zoomLevel > 16 && zoomLevel <19)
 	highZoom=true;
 else if(zoomLevel <17&& zoomLevel >14)
@@ -456,6 +488,7 @@ else if(zoomLevel > 18)
 
 if(highZoom==true)
 {
+	//for all markers in the different marker arrays, icons are changed to medium size
 	for (i = 0; i < hrmarkers.length; i++)
   		hrmarkers[i].setIcon('images/hr/hrmedium.png');
   	for (i = 0; i < hgmarkers.length; i++)
@@ -494,6 +527,7 @@ if(highZoom==true)
 
 if(veryHighZoom==true)
 {
+	//for all markers in the different marker arrays, icons are changed to large size
 	for (i = 0; i < hrmarkers.length; i++)
   		hrmarkers[i].setIcon('images/hr/hrlarge.png');
   	for (i = 0; i < hgmarkers.length; i++)
@@ -533,6 +567,7 @@ if(veryHighZoom==true)
 
 if(lowZoom==true)
 {
+	//for all markers in the different marker arrays, icons are changed to small size
 	for (i = 0; i < hrmarkers.length; i++)
   		hrmarkers[i].setIcon('images/hr/hrsmall.png');
   	for (i = 0; i < hgmarkers.length; i++)
@@ -570,6 +605,7 @@ if(lowZoom==true)
 
 if(veryLowZoom==true)
 {
+	//for all markers in the different marker arrays, icons are changed to very small size
 	for (i = 0; i < hrmarkers.length; i++)
   		hrmarkers[i].setIcon('images/hr/hrverysmall.png');
   	for (i = 0; i < hgmarkers.length; i++)

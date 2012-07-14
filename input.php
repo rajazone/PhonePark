@@ -1,5 +1,4 @@
 <?php
-include_once "db.php";
 $lati = $_REQUEST['Lati'];
 $longi = $_REQUEST['Longi'];
 $distance=0.5;
