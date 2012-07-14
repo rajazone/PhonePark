@@ -95,14 +95,13 @@ public class Main extends Activity
 							String line = null;
 							while ((line = reader.readLine()) != null) 
 							{
-								sb.append(line + "\n");
+								sb.append(line);
 							}
 							is.close();
 							String result = "";
 							result = sb.toString();
-							String addresses[] = result.split(":");
-							//assign the first address into EditText 3 - Address
-							et3.setText(addresses[0]);
+							//assign the address in the result variable to EditText 3 - Address
+							et3.setText(result);
 						} catch (ClientProtocolException e1) {
 							e1.printStackTrace();
 						} catch (IOException e1) {

@@ -1,4 +1,8 @@
 <?php
+<<<<<<< HEAD
+=======
+
+>>>>>>> Comments added for all files -
 //credentials are given for database
 $dsn = 'mysql:dbname=dbname;host=host';
 $user = 'username';
